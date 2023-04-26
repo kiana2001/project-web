@@ -3,7 +3,8 @@ let searchBar = document.querySelector('.search-bar-container');
 let formBtn = document.querySelector('#login-btn');
 let loginForm = document.querySelector('.login-form-container');
 let formclose = document.querySelector('#form-close');
-
+let menu = document.querySelector('#menu-bar');
+let navbar = document.querySelector('.navbar');
 
 
 window.onscroll = ( ) =>{
@@ -13,6 +14,10 @@ window.onscroll = ( ) =>{
 searchBtn.addEventListener('click', () =>{
     searchBtn.classList.toggle('fa-times');
     searchBar.classList.toggle('active'); 
+});
+menu.addEventListener('click', () =>{
+    menu.classList.toggle('fa-times');
+   navbar.classList.toggle('active'); 
 });
 formBtn.addEventListener('click', () =>{
   
