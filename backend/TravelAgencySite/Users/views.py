@@ -1,79 +1,65 @@
-from django.contrib.auth.decorators import login_required
-
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework import viewsets
-from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
-from .models import Record
-from .serializers import RecordSerializer, MyUserSerializer
-
-from django.contrib.auth import authenticate, login, logout
-from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from .serializers import UserSerializer
+import json
 
-@api_view(["POST"])
-@ensure_csrf_cookie
-def login_api(request):
-    email = request.data.get("email")
-    password = request.data.get("password")
-
-    user = authenticate(request=request, email=email, password=password)
-    if user is not None:
-        login(request, user)
-        return Response({"detail": "Login Successful"}, status=status.HTTP_200_OK)
-    else:
-        return Response({"detail": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-
-@api_view(["GET"])
-@ensure_csrf_cookie
-def logout_api(request):
-    logout(request)
-    return Response({"detail": "Logout Successful"}, status=status.HTTP_200_OK)
-
-
-@api_view(["POST"])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def register_api(request):
-    serializer = MyUserSerializer(data=request.data)
+    serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        return Response({"detail": "Registration Successful"}, status=status.HTTP_201_CREATED)
+        # Set session and cookie for the registered user
+        request.session['user_id'] = user.id
+        response = Response(serializer.data)
+        response.set_cookie('user_id', user.id)
+        return response
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_api(request):
+    #data = json.loads(request.body)
+    username = request.data.get('email')
+    password = request.data.get('password')
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        # Set session and cookie for the logged in user
+        request.session['user_id'] = user.id
+        response = Response({'message': 'Logged in successfully'})
+        response.set_cookie('user_id', user.id)
+        return response
     else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["GET"])
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def logout_api(request):
+    logout(request)
+    # Remove the session and cookie for the logged out user
+    request.session.flush()
+    response = Response({'message': 'Logged out successfully'})
+    response.delete_cookie('user_id')
+    return response
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated])
 def profile_api(request):
-    serializer = MyUserSerializer(request.user)
-    return Response(serializer.data)
-
-
-# class IsMemberOfRecordAdder(BasePermission):
-#     def has_permission(self, request, view):
-#         return request.user.groups.filter(name='Record Adder').exists()
-#
-#
-# class IsMemberOfDataViewer(BasePermission):
-#     def has_permission(self, request, view):
-#         return request.user.groups.filter(name='Data Viewer').exists()
-#
-#
-# class RecordViewSet(viewsets.ModelViewSet):
-#     queryset = Record.objects.all()
-#     serializer_class = RecordSerializer
-#     authentication_classes = [SessionAuthentication]
-#     permission_classes = [IsAuthenticated, IsMemberOf]
-#
-#     def get_permissions(self):
-#         if self.action == 'create':
-#             permission_classes = [IsAuthenticated, IsMemberOfRecordAdder]
-#         else:
-#             permission_classes = [IsAuthenticated, IsMemberOfDataViewer]
-#
-#         return [permission() for permission in permission_classes]
-#
-#     def perform_create(self, serializer):
-#         serializer.save(user=self.request.user)
+    user = request.user
+    if request.method == 'GET':
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+    elif request.method == 'PUT':
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

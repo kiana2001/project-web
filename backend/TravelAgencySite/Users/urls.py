@@ -7,8 +7,8 @@ router = routers.DefaultRouter()
 
 urlpatterns = [
     #path('api/', include(router.urls)),
-    path('api-auth/login/', login_api, name='login'),
-    path('api-auth/logout/', logout_api, name='logout'),
-    path('api-auth/register/', register_api, name='register'),
-    path('api-auth/profile/', profile_api, name='profile')
+    path('login/', login_api, name='login'),
+    path('logout/', logout_api, name='logout'),
+    path('register/', register_api, name='register'),
+    path('profile/', profile_api, name='profile')
 ]
