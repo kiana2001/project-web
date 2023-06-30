@@ -22,4 +22,5 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('', include('Users.urls')),
     path('', include('FlightBooking.urls')),
+    path('', include('HotelReservation.urls')),
 ]

@@ -3,53 +3,84 @@ from rest_framework.response import Response
 from django.db.models import Q
 from datetime import datetime
 from pytz import timezone
+from rest_framework.views import APIView
+
 from .models import Flight, FlightReservation
 from .serializers import FlightSerializer, FlightReservationSerializer
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
-class FlightList(generics.ListAPIView):
-    serializer_class = FlightSerializer
+# class FlightList(generics.ListAPIView):
+#     serializer_class = FlightSerializer
+#
+#     def get_queryset(self):
+#         queryset = Flight.objects.all()
+#
+#         # Filter by departure airport
+#         dep_airport = self.request.query_params.get('departure_airport', None)
+#         if dep_airport is not None:
+#             queryset = queryset.filter(departure_airport=dep_airport.upper())
+#
+#         # Filter by arrival airport
+#         arr_airport = self.request.query_params.get('arrival_airport', None)
+#         if arr_airport is not None:
+#             queryset = queryset.filter(arrival_airport=arr_airport.upper())
+#
+#         # Filter by departure date
+#         dep_date_str = self.request.query_params.get('departure_date', None)
+#         if dep_date_str is not None:
+#             try:
+#                 dep_date = datetime.strptime(dep_date_str, '%Y-%m-%d')
+#                 timezone_obj = timezone('US/Eastern')  # Set timezone to Eastern Standard Time by default
+#                 dep_date = timezone_obj.localize(dep_date)
+#
+#                 # Filter flights that depart on or after the specified date
+#                 queryset = queryset.filter(departure_time__gte=dep_date)
+#             except ValueError:
+#                 pass
+#
+#         # Filter by return date (for round trip)
+#         return_date_str = self.request.query_params.get('return_date', None)
+#         if return_date_str is not None:
+#             try:
+#                 return_date = datetime.strptime(return_date_str, '%Y-%m-%d')
+#                 timezone_obj = timezone('US/Eastern')
+#                 return_date = timezone_obj.localize(return_date)
+#
+#                 # Filter flights that arrive on or before the specified return date
+#                 queryset = queryset.filter(arrival_time__lte=return_date)
+#             except ValueError:
+#                 pass
+#
+#         return queryset
 
-    def get_queryset(self):
-        queryset = Flight.objects.all()
+class FlightSearchView(APIView):
+    def get(self, request):
+        departure_city = request.GET.get('departure_city')
+        arrival_city = request.GET.get('arrival_city')
+        departure_date = request.GET.get('departure_date')
+        is_round_trip = bool(request.GET.get('is_round_trip', False))
+        return_date = request.GET.get('return_date')
+        num_passengers = int(request.GET.get('num_passengers', 1))
+        flights_outbound = Flight.objects.filter(origin=departure_city,
+                                                 destination=arrival_city,
+                                                 departure_date=datetime.strptime(departure_date, '%Y-%m-%d').date(),
+                                                 capacity__gte=num_passengers)
+        serializer_outbound = FlightSerializer(flights_outbound, many=True)
 
-        # Filter by departure airport
-        dep_airport = self.request.query_params.get('departure_airport', None)
-        if dep_airport is not None:
-            queryset = queryset.filter(departure_airport=dep_airport.upper())
+        if is_round_trip:
+            flights_return = Flight.objects.filter(origin=arrival_city,
+                                                   destination=departure_city,
+                                                   return_date=datetime.strptime(return_date,'%Y-%m-%d').date(),
+                                                   capacity__gte=num_passengers)
 
-        # Filter by arrival airport
-        arr_airport = self.request.query_params.get('arrival_airport', None)
-        if arr_airport is not None:
-            queryset = queryset.filter(arrival_airport=arr_airport.upper())
+            serializer_return = FlightSerializer(flights_return, many=True)
 
-        # Filter by departure date
-        dep_date_str = self.request.query_params.get('departure_date', None)
-        if dep_date_str is not None:
-            try:
-                dep_date = datetime.strptime(dep_date_str, '%Y-%m-%d')
-                timezone_obj = timezone('US/Eastern')  # Set timezone to Eastern Standard Time by default
-                dep_date = timezone_obj.localize(dep_date)
+            return Response({
+                'flights_outbound': serializer_outbound.data,
+                'flights_return': serializer_return.data
+            })
 
-                # Filter flights that depart on or after the specified date
-                queryset = queryset.filter(departure_time__gte=dep_date)
-            except ValueError:
-                pass
-
-        # Filter by return date (for round trip)
-        return_date_str = self.request.query_params.get('return_date', None)
-        if return_date_str is not None:
-            try:
-                return_date = datetime.strptime(return_date_str, '%Y-%m-%d')
-                timezone_obj = timezone('US/Eastern')
-                return_date = timezone_obj.localize(return_date)
-
-                # Filter flights that arrive on or before the specified return date
-                queryset = queryset.filter(arrival_time__lte=return_date)
-            except ValueError:
-                pass
-
-        return queryset
+        return Response(serializer_outbound.data)
 
 class FlightDetail(generics.RetrieveAPIView):
     queryset = Flight.objects.all()
