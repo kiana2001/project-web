@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import CustomUser, Record
+from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     password_confirmation = serializers.CharField(write_only=True)
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = ('email', 'first_name', 'last_name', 'password', 'password_confirmation', 'phone_number')
         extra_kwargs = {
             'password': {'write_only': True},
@@ -29,9 +29,3 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save()
         return user
-
-
-class RecordSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Record
-        fields = '__all__'

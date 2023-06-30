@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 
 
-class CustomUserManager(BaseUserManager):
+class UserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password=None, **extra_fields):
         if not email:
             raise ValueError('Users must have an email address')
@@ -19,8 +19,9 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email,first_name, last_name, password, **extra_fields)
 
 
-class CustomUser(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
+    ssn = models.CharField(max_length=10)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20, blank=False)
@@ -29,7 +30,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'phone_number']
-    objects = CustomUserManager()
+    objects = UserManager()
     def __str__(self):
         return self.email
     def has_perm(self, perm, obj=None):
@@ -37,8 +38,4 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perms(self, app_label):
         return self.is_staff
-
-
-class Record(models.Model):
-    phone_number = models.CharField(max_length=20, blank=False)
 

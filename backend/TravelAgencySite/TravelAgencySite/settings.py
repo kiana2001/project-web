@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     # project apps:
     'Users',
+    'FlightBooking',
     ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -113,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = 'Users.CustomUser'
+AUTH_USER_MODEL = 'Users.User'
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
